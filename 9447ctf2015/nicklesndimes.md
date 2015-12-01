@@ -1,4 +1,4 @@
-# nicklesndimes (WEB 200pts) 
+# nicklesndimes (WEB 200pts) - Bushwhackers
 
 We are given a link to a website. Things we can do on it are registration, logging in, resetting a password (using a revovery token sent to an email) and listing other users. The task is to log in as admin. 
 
