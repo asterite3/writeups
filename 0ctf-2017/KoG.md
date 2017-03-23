@@ -228,7 +228,7 @@ def test(payload):
 ## Server side
 
 Let's try our first idea, SQLi:
-```
+```pycon
 >>> test('4')
 http://202.120.7.213:11181/api.php?id=4&hash=35306a53e5a1d2560b935e64df97c203&time=orange
 200
