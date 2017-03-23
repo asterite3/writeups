@@ -67,7 +67,7 @@ Which is really (in C++) named
 ```c++
 HASH1::hexdigest() const
 ```
-Wait, what was it's name again?? Alright, we'll get back to it soon/
+Wait, what was it's name again?? Alright, we'll get back to it soon.
 * Memory is modeled with [ArrayBuffer](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer):
 ```javascript
 var buffer;
