@@ -54,4 +54,50 @@ Ok,so this surely looks like a C++ code comliled to JS with [Emscripten](https:/
 emscripten::internal::Invoker<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >::invoke(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > (*)(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >), emscripten::internal::BindingType<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >::{unnamed type#1}*)
 emscripten::internal::BindingType<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >::toWireType(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&)
 ```
-So, if our theory about signature forging is right, we would have to reverse-engineer this code and either find a place where validation is performed to patch it and have the script sign `id`s for us, or understand the signature algorithm and make signatures ourselves.
+
+In short, code translated by Emscripten works like this:
+* Functions are expressed by normas JS functions, all variables and argument names are prefixed with dollar sign. Class methods are given `$this` as a first argument
+* Memory is modeled with [ArrayBuffer](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer):
+```javascript
+var buffer;
+buffer = new ArrayBuffer(TOTAL_MEMORY);
+HEAP8 = new Int8Array(buffer);
+HEAP16 = new Int16Array(buffer);
+HEAP32 = new Int32Array(buffer);
+HEAPU8 = new Uint8Array(buffer);
+HEAPU16 = new Uint16Array(buffer);
+HEAPU32 = new Uint32Array(buffer);
+HEAPF32 = new Float32Array(buffer);
+HEAPF64 = new Float64Array(buffer);
+```
+So different `HEAP`s are views of this memory array and when a program wants to read one byte from memory at address `$79`, it will do
+```javascript
+$88 = HEAP8[$79>>0]|0;
+```
+And for reading four-byte `int` from address `$67`:
+```javascript
+$90 = HEAP32[$67>>2]|0;
+```
+Note that for heap views storing memory in larger chunks address has to be right-shifted, e. g. divided by `size_of_chunk / size_of_one_byte`.
+
+* There is also a stack, residing somewhere on that `HEAP`:
+```javascript
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 96|0;
+ $a = sp + 80|0;
+ $b = sp + 8|0;
+ $c = sp + 4|0;
+ $d = sp;
+ $x = sp + 16|0;
+ $0 = ((($this)) + 76|0);
+ $1 = HEAP32[$0>>2]|0;
+ HEAP32[$a>>2] = $1;
+ $2 = ((($this)) + 80|0);
+ $3 = HEAP32[$2>>2]|0;
+ HEAP32[$b>>2] = $3;
+```
+* Libc and standard C++ library also was statically compiled and implemented in JS the same way.
+
+Back to the task: if our theory about signature forging is right, we would have to reverse-engineer this code and either find a place where validation is performed to patch it and have the script sign `id`s for us, or understand the signature algorithm and make signatures ourselves. To our luck, most of the function names and some variable names were preserved, so we did not have to reverse-engineer every function to undestand what it does (`memcpy` or `_strlen` for example).
+
+We used JS debugger in Google Chrome DevTools to trace throw the code execution and undestand what's going on.
