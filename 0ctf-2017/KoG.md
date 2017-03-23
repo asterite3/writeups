@@ -56,7 +56,7 @@ emscripten::internal::BindingType<std::__1::basic_string<char, std::__1::char_tr
 ```
 
 In short, code translated by Emscripten works like this:
-* Functions are expressed by normas JS functions, all variables and argument names are prefixed with dollar sign. Class methods are given `$this` as a first argument
+* Functions are expressed by normal JS functions with all variable and argument names are prefixed with dollar sign. Class methods are given `$this` as a first argument
 * Memory is modeled with [ArrayBuffer](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer):
 ```javascript
 var buffer;
@@ -78,7 +78,7 @@ And for reading four-byte `int` from address `$67`:
 ```javascript
 $90 = HEAP32[$67>>2]|0;
 ```
-Note that for heap views storing memory in larger chunks address has to be right-shifted, e. g. divided by `size_of_chunk / size_of_one_byte`.
+Note that for heap views storing memory in larger chunks an address has to be right-shifted, e. g. divided by `size_of_chunk / size_of_one_byte`.
 
 * There is also a stack, residing somewhere on that `HEAP`:
 ```javascript
@@ -96,8 +96,8 @@ Note that for heap views storing memory in larger chunks address has to be right
  $3 = HEAP32[$2>>2]|0;
  HEAP32[$b>>2] = $3;
 ```
-* Libc and standard C++ library also was statically compiled and implemented in JS the same way.
+* Libc and standard C++ library also was statically compiled and implemented in JS in the same way.
 
-Back to the task: if our theory about signature forging is right, we would have to reverse-engineer this code and either find a place where validation is performed to patch it and have the script sign `id`s for us, or understand the signature algorithm and make signatures ourselves. To our luck, most of the function names and some variable names were preserved, so we did not have to reverse-engineer every function to undestand what it does (`memcpy` or `_strlen` for example).
+Back to the task: if our theory about signature forging is right, we would have to reverse-engineer this code and either find a place where validation is performed to patch it and have the script sign `id`s for us, or understand the signature algorithm and make signatures ourselves. To our luck, most of the function names and some variable names were preserved, so we did not have to reverse-engineer every function to undestand what it does (`_memcpy` or `_strlen` for example).
 
-We used JS debugger in Google Chrome DevTools to trace throw the code execution and undestand what's going on.
+We used JS debugger in Google Chrome DevTools to trace through the code execution and undestand what's going on.
