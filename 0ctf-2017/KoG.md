@@ -2,7 +2,7 @@
 
 We are given a link to a website. The main page is totally non-interactive, the only text on it is "King of Glory Player List hmmmm". This definitely means we should explore web page's source.
 
-There we find out that one JS file is included using a script tag, `functionn.js` (in case the task is disabled, it is saved [here](https://raw.githubusercontent.com/asterite3/writeups/master/0ctf-2017/functionn.js)). Also, there are two JS functions on a page, one that parses URL query string, `GetUrlParms();` (not interesting) and another one, `go()`:
+There we find out that a JS file is included using a script tag, `functionn.js` (in case the task is disabled, it is saved [here](https://raw.githubusercontent.com/asterite3/writeups/master/0ctf-2017/functionn.js)). Also, there are two JS functions on a page, one that parses URL query string, `GetUrlParms();` (not interesting) and another one, `go()`:
 
 ```javascript
 function go()
@@ -160,9 +160,9 @@ The code works a lot with c++ strings, which confused us for some time. We reali
 ```javascript
 rs = function (addr) {
     var addr32 = addr >> 2,
-        isInlined = HEAP8[addr] & 1
+        notInlined = HEAP8[addr] & 1,
         len;
-    if (!isInlined) {
+    if (notInlined) {
         len = HEAP32[addr32 + 1];
         return r(HEAP32[addr32 + 2], len);
     } else {
